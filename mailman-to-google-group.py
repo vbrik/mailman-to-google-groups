@@ -38,7 +38,7 @@ def main():
     if mmcfg['default_member_moderation']:
         messageModerationLevel = 'MODERATE_ALL_MESSAGES'
 
-    ggcfg = {#"email": mmcfg["email"],
+    ggcfg = {"email": mmcfg["email"],
              "name": mmcfg["real_name"],
              "description": mmcfg["description"]+b"\n"+mmcfg['info'] if mmcfg['info'] else mmcfg["description"],
              "whoCanJoin": "CAN_REQUEST_TO_JOIN",
