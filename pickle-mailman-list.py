@@ -3,36 +3,40 @@ import argparse
 import pickle
 import subprocess
 import sys
-from pprint import pprint
-
 
 def main():
     parser = argparse.ArgumentParser(
             description="Save in LIST.pkl the settings and members of a mailman "
                         "mailing list.",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('list', metavar='LIST', help='list name')
+    parser.add_argument('list', metavar='EMAIL', help='list email')
+    parser.add_argument('--host', metavar='NAME', required=True,
+                        help='mailman host to ssh to')
     parser.add_argument('--bin-dir', metavar='PATH', default='/usr/lib/mailman/bin/',
                         help='mailman bin directory')
     args = parser.parse_args()
 
-    p = subprocess.Popen([args.bin_dir + '/config_list', '-o', '-', args.list],
+    listname = args.list.split('@')[0]
+
+    cfg = {'email': args.list}
+
+    p = subprocess.Popen(['ssh', args.host, args.bin_dir + '/config_list', '-o', '-', listname],
                          stdout=subprocess.PIPE)
     stdout, stderr = p.communicate()
-    cfg = {}
     exec(stdout, None, cfg)
 
-    p = subprocess.Popen([args.bin_dir + '/list_members', '--digest', args.list],
+    p = subprocess.Popen(['ssh', args.host, args.bin_dir + '/list_members', '--digest', listname],
                          stdout=subprocess.PIPE)
     stdout, stderr = p.communicate()
-    cfg['digest_members'] = [l.strip() for l in stdout.split('\n')]
+    cfg['digest_members'] = [l.strip() for l in stdout.split(b'\n')]
 
-    p = subprocess.Popen([args.bin_dir + '/list_members', '--regular', args.list],
+    p = subprocess.Popen(['ssh', args.host, args.bin_dir + '/list_members', '--regular', listname],
                          stdout=subprocess.PIPE)
     stdout, stderr = p.communicate()
-    cfg['regular_members'] = [l.strip() for l in stdout.split('\n')]
+    cfg['regular_members'] = [l.strip() for l in stdout.split(b'\n')]
 
-    pickle.dump(cfg, open(args.list + '.pkl', 'w'))
+    with open(listname + '.pkl', 'wb') as f:
+        pickle.dump(cfg, f)
 
 
 if __name__ == '__main__':
