@@ -238,6 +238,11 @@ def main():
                 body={"role": "MANAGER"},
             ).execute()
     svc.close()
+    logging.info("MAILING LIST SUBJECT PREFIX CANNOT BE SET PROGRAMMATICALLY")
+    addr, domain = ggcfg["email"].split("@")
+    logging.info(
+        f"Set 'Subject prefix' in https://groups.google.com/u/2/a/{domain}/g/{addr}/settings"
+    )
 
 
 if __name__ == "__main__":
