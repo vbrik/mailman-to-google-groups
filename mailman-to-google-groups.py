@@ -112,11 +112,12 @@ def mailman_to_google_group_config(mmcfg):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="",
+        description="Import mailman list configuration (settings and members) into\n"
+        "Google Groups using mailman command-line tools and Google API¹.",
         epilog="Notes:\n"
-        "[1] The service account needs to be set up for domain-wide delegation.\n"
-        "[2] The delegate account needs to have a Google Workspace admin role.\n"
-        "XXX which APIs to enable",
+        "[1] The following APIs must be enabled: Admin SDK, Group Settings.\n"
+        "[2] The service account needs to be set up for domain-wide delegation.\n"
+        "[3] The delegate account needs to have a Google Workspace admin role.",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument("--list", metavar="EMAIL", required=True, help="list email")
@@ -124,7 +125,7 @@ def main():
         "--host", metavar="NAME", required=True, help="mailman host to ssh to"
     )
     parser.add_argument(
-        "--mailman-bin-dir",
+        "--mailman-bin",
         metavar="PATH",
         default="/usr/lib/mailman/bin/",
         help="mailman bin directory (default: /usr/lib/mailman/bin/)",
@@ -133,13 +134,13 @@ def main():
         "--sa-creds",
         metavar="PATH",
         required=True,
-        help="service account credentials JSON¹",
+        help="service account credentials JSON²",
     )
     parser.add_argument(
         "--sa-delegate",
         metavar="EMAIL",
         required=True,
-        help="the principal whom the service account will impersonate²",
+        help="the principal whom the service account will impersonate³",
     )
     parser.add_argument(
         "--log-level",
@@ -155,7 +156,7 @@ def main():
     )
 
     logging.info(f"Retrieving mailman list configuration of {args.list}")
-    mmcfg = get_mailman_list_config(args.host, args.list, args.mailman_bin_dir)
+    mmcfg = get_mailman_list_config(args.host, args.list, args.mailman_bin)
     logging.debug(pformat(mmcfg))
     logging.info("Converting mailman list settings to google group settings")
     ggcfg = mailman_to_google_group_config(mmcfg)
@@ -207,15 +208,18 @@ def main():
         "admin", "directory_v1", credentials=creds, cache_discovery=False
     )
     members = svc.members()
+
     for member in mmcfg["digest_members"]:
         logging.info(f"Inserting digest member {member}")
         members.insert(
             groupKey=ggcfg["email"],
             body={"email": member, "delivery_settings": "DIGEST"},
         ).execute()
+
     for member in mmcfg["regular_members"]:
         logging.info(f"Inserting member {member}")
         members.insert(groupKey=ggcfg["email"], body={"email": member}).execute()
+
     for owner in mmcfg["owner"]:
         logging.info(f"Inserting owner {owner}")
         try:
