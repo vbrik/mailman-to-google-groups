@@ -3,10 +3,11 @@ import argparse
 import subprocess
 import sys
 import logging
-from pprint import pprint
+from pprint import pprint, pformat
 from google.oauth2 import service_account
 from googleapiclient import discovery
 from googleapiclient.errors import HttpError
+
 
 def get_mailman_list_config(hostname, list_email, bin_dir):
     list_name = list_email.split("@")[0]
@@ -155,8 +156,10 @@ def main():
 
     logging.info(f"Retrieving mailman list configuration of {args.list}")
     mmcfg = get_mailman_list_config(args.host, args.list, args.mailman_bin_dir)
+    logging.debug(pformat(mmcfg))
     logging.info("Converting mailman list settings to google group settings")
     ggcfg = mailman_to_google_group_config(mmcfg)
+    logging.debug(pformat(ggcfg))
 
     SCOPES = [
         "https://www.googleapis.com/auth/admin.directory.group",
@@ -168,41 +171,69 @@ def main():
         args.sa_creds, scopes=SCOPES, subject=args.sa_delegate
     )
 
-    with discovery.build("admin", "directory_v1", credentials=creds) as svc:
-        try:
-            logging.info(f"Creating group {ggcfg['email']}")
-            svc.groups().insert(body={
-                "description": ggcfg['description'],
+    svc = discovery.build(
+        "admin", "directory_v1", credentials=creds, cache_discovery=False
+    )
+    try:
+        logging.info(f"Creating group {ggcfg['email']}")
+        svc.groups().insert(
+            body={
+                "description": ggcfg["description"],
                 "email": ggcfg["email"],
                 "name": ggcfg["name"],
-            }).execute()
+            }
+        ).execute()
+    except HttpError as e:
+        if e.status_code == 409:  # entity already exists
+            logging.info("Group already exists")
+        else:
+            raise
+    finally:
+        svc.close()
+
+    svc = discovery.build(
+        "groupssettings", "v1", credentials=creds, cache_discovery=False
+    )
+    try:
+        logging.info(f"Configuring group {ggcfg['email']}")
+        svc.groups().patch(
+            groupUniqueId=ggcfg["email"],
+            body=ggcfg,
+        ).execute()
+    finally:
+        svc.close()
+
+    svc = discovery.build(
+        "admin", "directory_v1", credentials=creds, cache_discovery=False
+    )
+    members = svc.members()
+    for member in mmcfg["digest_members"]:
+        logging.info(f"Inserting digest member {member}")
+        members.insert(
+            groupKey=ggcfg["email"],
+            body={"email": member, "delivery_settings": "DIGEST"},
+        ).execute()
+    for member in mmcfg["regular_members"]:
+        logging.info(f"Inserting member {member}")
+        members.insert(groupKey=ggcfg["email"], body={"email": member}).execute()
+    for owner in mmcfg["owner"]:
+        logging.info(f"Inserting owner {owner}")
+        try:
+            members.get(groupKey=ggcfg["email"], memberKey=owner).execute()
         except HttpError as e:
-            if e.status_code == 409:  # entity already exists
-                pass
+            if e.status_code == 404:
+                members.insert(
+                    groupKey=ggcfg["email"], body={"email": owner, "role": "MANAGER"}
+                ).execute()
             else:
                 raise
-
-
-
-
-    return
-    service = discovery.build("groupssettings", "v1", credentials=creds)
-    groups = service.groups()
-    req = groups.get(groupUniqueId="vbrik-test-group-1@icecube.wisc.edu")
-    res = req.execute()
-    pprint(res)
-
-    req = groups.patch(
-        groupUniqueId="vbrik-test-group-1@icecube.wisc.edu",
-        body={"description": "test testt test"},
-    )
-    res = req.execute()
-    pprint(res)
-    service.close()
-
-
-#    with open(listname + '.pkl', 'wb') as f:
-#        pickle.dump(cfg, f)
+        else:
+            members.patch(
+                groupKey=ggcfg["email"],
+                memberKey=owner,
+                body={"role": "MANAGER"},
+            ).execute()
+    svc.close()
 
 
 if __name__ == "__main__":
