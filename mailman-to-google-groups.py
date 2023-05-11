@@ -3,37 +3,11 @@ import argparse
 import subprocess
 import sys
 import logging
+import pickle
 from pprint import pprint, pformat
 from google.oauth2 import service_account
 from googleapiclient import discovery
 from googleapiclient.errors import HttpError
-
-
-def get_mailman_list_config(hostname, list_email, bin_dir):
-    list_name = list_email.split("@")[0]
-
-    cfg = {"email": list_email}
-
-    out = subprocess.check_output(
-        ["ssh", hostname, bin_dir + "/config_list", "-o", "-", list_name]
-    )
-    exec(out, None, cfg)
-
-    out = subprocess.check_output(
-        ["ssh", hostname, bin_dir + "/list_members", "--digest", list_name]
-    )
-    cfg["digest_members"] = [
-        line.strip().decode("ascii") for line in out.split(b"\n") if line.strip()
-    ]
-
-    out = subprocess.check_output(
-        ["ssh", hostname, bin_dir + "/list_members", "--regular", list_name]
-    )
-    cfg["regular_members"] = [
-        line.strip().decode("ascii") for line in out.split(b"\n") if line.strip()
-    ]
-
-    return cfg
 
 
 def mailman_to_google_group_config(mmcfg):
@@ -112,23 +86,19 @@ def mailman_to_google_group_config(mmcfg):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Import mailman list configuration (settings and members) into\n"
-        "Google Groups using mailman command-line tools and Google API¹.",
+        description="Import mailman list configuration (settings and members) created\n"
+        "by `pickle-mailman-list.py` into Google Groups using Google API¹.",
         epilog="Notes:\n"
         "[1] The following APIs must be enabled: Admin SDK, Group Settings.\n"
         "[2] The service account needs to be set up for domain-wide delegation.\n"
         "[3] The delegate account needs to have a Google Workspace admin role.",
         formatter_class=argparse.RawTextHelpFormatter,
     )
-    parser.add_argument("--list", metavar="EMAIL", required=True, help="list email")
     parser.add_argument(
-        "--host", metavar="NAME", required=True, help="mailman host to ssh to"
-    )
-    parser.add_argument(
-        "--mailman-bin",
+        "--list-pkl",
         metavar="PATH",
-        default="/usr/lib/mailman/bin/",
-        help="mailman bin directory (default: /usr/lib/mailman/bin/)",
+        required=True,
+        help="mailman list configuration pickle created by pickle-mailman-list.py",
     )
     parser.add_argument(
         "--sa-creds",
@@ -155,8 +125,9 @@ def main():
         format="%(asctime)-23s %(levelname)s %(message)s",
     )
 
-    logging.info(f"Retrieving mailman list configuration of {args.list}")
-    mmcfg = get_mailman_list_config(args.host, args.list, args.mailman_bin)
+    logging.info(f"Retrieving mailman list configuration from {args.list_pkl}")
+    with open(args.list_pkl, "rb") as f:
+        mmcfg = pickle.load(f)
     logging.debug(pformat(mmcfg))
     logging.info("Converting mailman list settings to google group settings")
     ggcfg = mailman_to_google_group_config(mmcfg)
