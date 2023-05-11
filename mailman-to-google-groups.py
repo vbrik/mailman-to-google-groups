@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 import argparse
-import subprocess
 import sys
 import logging
 import pickle
-from pprint import pprint, pformat
+from pprint import pformat
 from google.oauth2 import service_account
 from googleapiclient import discovery
 from googleapiclient.errors import HttpError
