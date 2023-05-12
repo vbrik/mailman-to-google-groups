@@ -9,7 +9,7 @@ from googleapiclient import discovery
 from googleapiclient.errors import HttpError
 
 
-def mailman_to_google_group_config(mmcfg):
+def get_google_group_config_from_mailman_config(mmcfg):
     # https://developers.google.com/admin-sdk/groups-settings/v1/reference/groups#json
     if mmcfg["advertised"] and mmcfg["archive"]:
         if mmcfg["archive_private"]:
@@ -46,7 +46,7 @@ def mailman_to_google_group_config(mmcfg):
         "whoCanJoin": "CAN_REQUEST_TO_JOIN",
         "whoCanViewMembership": "ALL_IN_DOMAIN_CAN_VIEW",
         "whoCanViewGroup": who_can_view_group,
-        "allowExternalMembers": "true",  # tighten later
+        "allowExternalMembers": "true",  # can't be tighter until we start forcing people to use @iwe addresses
         "whoCanPostMessage": who_can_post_message,
         "allowWebPosting": "true",
         "primaryLanguage": "en",
@@ -54,12 +54,12 @@ def mailman_to_google_group_config(mmcfg):
         "archiveOnly": "false",
         "messageModerationLevel": message_moderation_level,
         "spamModerationLevel": "MODERATE",  # this is the default
-        "replyTo": "REPLY_TO_IGNORE",  # users individually decide where the message reply is sent.
+        "replyTo": "REPLY_TO_IGNORE",  # users individually decide where the message reply is sent
         # "customReplyTo": "",  # only if replyTo is REPLY_TO_CUSTOM
         "includeCustomFooter": "false",
         # "customFooterText": ""  # only if includeCustomFooter,
-        "sendMessageDenyNotification": "false",  # to not have to set defaultMessageDenyNotificationText
-        # "defaultMessageDenyNotificationText": "",
+        "sendMessageDenyNotification": "false",
+        # "defaultMessageDenyNotificationText": "",  # only matters if sendMessageDenyNotification is true
         "membersCanPostAsTheGroup": "false",
         "includeInGlobalAddressList": "false",  # has to do with Outlook integration
         "whoCanLeaveGroup": (
@@ -67,10 +67,10 @@ def mailman_to_google_group_config(mmcfg):
         ),
         "whoCanContactOwner": "ALL_IN_DOMAIN_CAN_CONTACT",
         "favoriteRepliesOnTop": "false",
-        "whoCanApproveMembers": "ALL_OWNERS_CAN_APPROVE",  # XXX we want custom role to do this
+        "whoCanApproveMembers": "ALL_MANAGERS_CAN_APPROVE",
         "whoCanBanUsers": "OWNERS_AND_MANAGERS",
-        "whoCanModerateMembers": "OWNERS_AND_MANAGERS",  # XXX we want custom role to do this
-        "whoCanModerateContent": "OWNERS_AND_MANAGERS",  # XXX we want custom role to do this
+        "whoCanModerateMembers": "OWNERS_AND_MANAGERS",
+        "whoCanModerateContent": "OWNERS_AND_MANAGERS",
         "whoCanAssistContent": "NONE",  # has something to do with collaborative inbox
         "enableCollaborativeInbox": "false",
         "whoCanDiscoverGroup": (
@@ -121,7 +121,7 @@ def main():
 
     logging.basicConfig(
         level=getattr(logging, args.log_level.upper()),
-        format="%(asctime)-23s %(levelname)s %(message)s",
+        format="%(levelname)s %(message)s",
     )
 
     logging.info(f"Retrieving mailman list configuration from {args.list_pkl}")
@@ -129,7 +129,7 @@ def main():
         mmcfg = pickle.load(f)
     logging.debug(pformat(mmcfg))
     logging.info("Converting mailman list settings to google group settings")
-    ggcfg = mailman_to_google_group_config(mmcfg)
+    ggcfg = get_google_group_config_from_mailman_config(mmcfg)
     logging.debug(pformat(ggcfg))
 
     SCOPES = [
@@ -225,7 +225,7 @@ def main():
 
     svc.close()
 
-    logging.info("MAILING LIST SUBJECT PREFIX CANNOT BE SET PROGRAMMATICALLY")
+    logging.info("!!!  MAILING LIST SUBJECT PREFIX CANNOT BE SET PROGRAMMATICALLY  !!!")
     addr, domain = ggcfg["email"].split("@")
     logging.info(
         f"Set 'Subject prefix' in https://groups.google.com/u/2/a/{domain}/g/{addr}/settings"
