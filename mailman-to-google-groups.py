@@ -214,17 +214,30 @@ def main():
                 raise
 
     for owner in mmcfg["owner"]:
-        logging.info(f"Inserting owner {owner}")
+        logging.info(f"Configuring list manager {owner}")
         try:
             members.get(groupKey=ggcfg["email"], memberKey=owner).execute()
         except HttpError as e:
             if e.status_code == 404:
-                members.insert(
-                    groupKey=ggcfg["email"], body={"email": owner, "role": "MANAGER"}
-                ).execute()
+                logging.info(f"Inserting {owner} as a manager")
+                try:
+                    members.insert(
+                        groupKey=ggcfg["email"], body={"email": owner, "role": "MANAGER"}
+                    ).execute()
+                except HttpError as e:
+                    if e.status_code == 409:  # conflict (member exists)
+                        # members.get() said user is not a member, but members.insert()
+                        # said user is a member. This is a known bug.
+                        # https://stackoverflow.com/questions/66992809/google-admin-sdk-directory-api-members-get-returns-a-404-for-member-email-but
+                        logging.error(
+                            f"Failed to configure manager {owner} due to a Google API bug"
+                        )
+                    else:
+                        raise
             else:
                 raise
         else:
+            logging.info(f"Patching {owner} to be manager")
             members.patch(
                 groupKey=ggcfg["email"],
                 memberKey=owner,
