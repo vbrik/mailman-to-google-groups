@@ -181,14 +181,29 @@ def main():
 
     for member in mmcfg["digest_members"]:
         logging.info(f"Inserting digest member {member}")
-        members.insert(
-            groupKey=ggcfg["email"],
-            body={"email": member, "delivery_settings": "DIGEST"},
-        ).execute()
+        try:
+            members.insert(
+                groupKey=ggcfg["email"],
+                body={"email": member, "delivery_settings": "DIGEST"},
+            ).execute()
+        except HttpError as e:
+            if e.status_code == 409:  # entity already exists
+                logging.info(f"User {member} already part of the group")
+            else:
+                raise
 
     for member in mmcfg["regular_members"]:
         logging.info(f"Inserting member {member}")
-        members.insert(groupKey=ggcfg["email"], body={"email": member}).execute()
+        try:
+            members.insert(
+                groupKey=ggcfg["email"],
+                body={"email": member, "delivery_settings": "ALL_MAIL"},
+            ).execute()
+        except HttpError as e:
+            if e.status_code == 409:  # entity already exists
+                logging.info(f"User {member} already part of the group")
+            else:
+                raise
 
     for owner in mmcfg["owner"]:
         logging.info(f"Inserting owner {owner}")
@@ -207,7 +222,9 @@ def main():
                 memberKey=owner,
                 body={"role": "MANAGER"},
             ).execute()
+
     svc.close()
+
     logging.info("MAILING LIST SUBJECT PREFIX CANNOT BE SET PROGRAMMATICALLY")
     addr, domain = ggcfg["email"].split("@")
     logging.info(
