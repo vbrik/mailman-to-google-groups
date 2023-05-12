@@ -23,8 +23,9 @@ def get_google_group_config_from_mailman_config(mmcfg):
         who_can_post_message = "ANYONE_CAN_POST"
     else:  # reject, discard
         who_can_post_message = "ALL_MEMBERS_CAN_POST"
-    if (
-        mmcfg["default_member_moderation"] and mmcfg["member_moderation_action"] in (1, 2)
+    if mmcfg["default_member_moderation"] and mmcfg["member_moderation_action"] in (
+        1,
+        2,
     ):  # reject or discard
         who_can_post_message = "NONE_CAN_POST"
 
