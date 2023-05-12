@@ -24,8 +24,8 @@ def get_google_group_config_from_mailman_config(mmcfg):
     else:  # reject, discard
         who_can_post_message = "ALL_MEMBERS_CAN_POST"
     if (
-        mmcfg["default_member_moderation"] and mmcfg["member_moderation_action"] != 0
-    ):  # hold
+        mmcfg["default_member_moderation"] and mmcfg["member_moderation_action"] in (1, 2)
+    ):  # reject or discard
         who_can_post_message = "NONE_CAN_POST"
 
     if mmcfg["generic_nonmember_action"] == 0:  # accept
@@ -34,6 +34,13 @@ def get_google_group_config_from_mailman_config(mmcfg):
         message_moderation_level = "MODERATE_NON_MEMBERS"
     if mmcfg["default_member_moderation"]:
         message_moderation_level = "MODERATE_ALL_MESSAGES"
+
+    if mmcfg["private_roster"] == 0:
+        who_can_view_membership = "ALL_IN_DOMAIN_CAN_VIEW"
+    elif mmcfg["private_roster"] == 1:
+        who_can_view_membership = "ALL_MEMBERS_CAN_VIEW"
+    else:
+        who_can_view_membership = "ALL_MANAGERS_CAN_VIEW"
 
     ggcfg = {
         "email": mmcfg["email"],
@@ -44,7 +51,7 @@ def get_google_group_config_from_mailman_config(mmcfg):
             else mmcfg["description"]
         ),
         "whoCanJoin": "CAN_REQUEST_TO_JOIN",
-        "whoCanViewMembership": "ALL_IN_DOMAIN_CAN_VIEW",
+        "whoCanViewMembership": who_can_view_membership,
         "whoCanViewGroup": who_can_view_group,
         "allowExternalMembers": "true",  # can't be tighter until we start forcing people to use @iwe addresses
         "whoCanPostMessage": who_can_post_message,
