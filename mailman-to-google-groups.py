@@ -187,13 +187,19 @@ def main():
     )
     members = svc.members()
 
+    # The flow for populating members and designating managers is a little
+    # weird to work-around a Google API bug where members.get() fails sometimes:
+    # https://stackoverflow.com/questions/66992809/google-admin-sdk-directory-api-members-get-returns-a-404-for-member-email-but
+
     for member in mmcfg["digest_members"]:
-        logging.info(f"Inserting digest member {member}")
+        body = {"email": member, "delivery_settings": "DIGEST"}
+        if member in mmcfg["owner"]:
+            logging.info(f"Inserting digest member {member} (manager)")
+            body["role"] = "MANAGER"
+        else:
+            logging.info(f"Inserting digest member {member}")
         try:
-            members.insert(
-                groupKey=ggcfg["email"],
-                body={"email": member, "delivery_settings": "DIGEST"},
-            ).execute()
+            members.insert(groupKey=ggcfg["email"], body=body).execute()
         except HttpError as e:
             if e.status_code == 409:  # entity already exists
                 logging.info(f"User {member} already part of the group")
@@ -201,48 +207,32 @@ def main():
                 raise
 
     for member in mmcfg["regular_members"]:
-        logging.info(f"Inserting member {member}")
+        body = {"email": member, "delivery_settings": "ALL_MAIL"}
+        if member in mmcfg["owner"]:
+            logging.info(f"Inserting member {member} (manager)")
+            body["role"] = "MANAGER"
+        else:
+            logging.info(f"Inserting member {member}")
         try:
-            members.insert(
-                groupKey=ggcfg["email"],
-                body={"email": member, "delivery_settings": "ALL_MAIL"},
-            ).execute()
+            members.insert(groupKey=ggcfg["email"], body=body).execute()
         except HttpError as e:
             if e.status_code == 409:  # entity already exists
                 logging.info(f"User {member} already part of the group")
             else:
                 raise
 
-    for owner in mmcfg["owner"]:
-        logging.info(f"Configuring list manager {owner}")
+    for owner in set(mmcfg["owner"]) - set(
+        mmcfg["digest_members"] + mmcfg["regular_members"]
+    ):
+        logging.info(f"Inserting non-member manager {owner}")
         try:
-            members.get(groupKey=ggcfg["email"], memberKey=owner).execute()
-        except HttpError as e:
-            if e.status_code == 404:
-                logging.info(f"Inserting {owner} as a manager")
-                try:
-                    members.insert(
-                        groupKey=ggcfg["email"], body={"email": owner, "role": "MANAGER"}
-                    ).execute()
-                except HttpError as e:
-                    if e.status_code == 409:  # conflict (member exists)
-                        # members.get() said user is not a member, but members.insert()
-                        # said user is a member. This is a known bug.
-                        # https://stackoverflow.com/questions/66992809/google-admin-sdk-directory-api-members-get-returns-a-404-for-member-email-but
-                        logging.error(
-                            f"Failed to configure manager {owner} due to a Google API bug"
-                        )
-                    else:
-                        raise
-            else:
-                raise
-        else:
-            logging.info(f"Patching {owner} to be manager")
-            members.patch(
+            members.insert(
                 groupKey=ggcfg["email"],
-                memberKey=owner,
-                body={"role": "MANAGER"},
+                body={"email": owner, "role": "MANAGER", "delivery_settings": "NONE"},
             ).execute()
+        except HttpError as e:
+            if e.status_code == 409:  # entity already exists
+                logging.info(f"User {owner} already part of the group")
 
     svc.close()
 
