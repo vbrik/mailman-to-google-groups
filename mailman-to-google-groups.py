@@ -3,6 +3,7 @@ import argparse
 import sys
 import logging
 import pickle
+import re
 from pprint import pformat
 from google.oauth2 import service_account
 from googleapiclient import discovery
@@ -233,6 +234,21 @@ def main():
         except HttpError as e:
             if e.status_code == 409:  # entity already exists
                 logging.info(f"User {owner} already part of the group")
+
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    for nonmember in mmcfg["accept_these_nonmembers"]:
+        if not re.match(email_regex, nonmember):
+            logging.info(f"Ignoring invalid non-member email {nonmember}")
+            continue
+        logging.info(f"Inserting non-member {nonmember}")
+        try:
+            members.insert(
+                groupKey=ggcfg["email"],
+                body={"email": nonmember, "delivery_settings": "NONE"},
+            ).execute()
+        except HttpError as e:
+            if e.status_code == 409:  # entity already exists
+                logging.info(f"User {nonmember} already part of the group")
 
     svc.close()
 
