@@ -112,7 +112,7 @@ def main():
         "--ignore",
         metavar="EMAIL",
         default=[],
-        nargs='*',
+        nargs="*",
         help="don't add EMAIL to group members",
     )
     parser.add_argument(
@@ -201,6 +201,7 @@ def main():
 
     for member in mmcfg["digest_members"]:
         if member in args.ignore:
+            logging.info(f"Skipping digest member {member} (on the ignore list)")
             continue
         body = {"email": member, "delivery_settings": "DIGEST"}
         if member in mmcfg["owner"]:
@@ -218,6 +219,7 @@ def main():
 
     for member in mmcfg["regular_members"]:
         if member in args.ignore:
+            logging.info(f"Skipping member {member} (on the ignore list)")
             continue
         body = {"email": member, "delivery_settings": "ALL_MAIL"}
         if member in mmcfg["owner"]:
@@ -237,6 +239,7 @@ def main():
         mmcfg["digest_members"] + mmcfg["regular_members"]
     ):
         if owner in args.ignore:
+            logging.info(f"Skipping non-member manager {owner} (on the ignore list)")
             continue
         logging.info(f"Inserting non-member manager {owner}")
         try:
@@ -251,6 +254,7 @@ def main():
     email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     for nonmember in mmcfg["accept_these_nonmembers"]:
         if nonmember in args.ignore:
+            logging.info(f"Skipping non-member {nonmember} (on the ignore list)")
             continue
         if not re.match(email_regex, nonmember):
             logging.info(f"Ignoring invalid non-member email {nonmember}")
@@ -267,11 +271,13 @@ def main():
 
     svc.close()
 
-    logging.info("!!!  MAILING LIST SUBJECT PREFIX CANNOT BE SET PROGRAMMATICALLY  !!!")
+    logging.info("!!!   SOME GOOGLE GROUP OPTIONS CANNOT BE SET PROGRAMMATICALLY")
     addr, domain = ggcfg["email"].split("@")
     logging.info(
-        f"Set 'Subject prefix' to '{mmcfg['subject_prefix'].strip()}' in https://groups.google.com/u/2/a/{domain}/g/{addr}/settings"
+        f"!!!   Configuration URL: https://groups.google.com/u/2/a/{domain}/g/{addr}/settings"
     )
+    logging.info(f"!!!   Set 'Subject prefix' to '{mmcfg['subject_prefix'].strip()}'")
+    logging.info(f"!!!   Consider enabling 'Include the standard Groups footer'")
 
 
 if __name__ == "__main__":
