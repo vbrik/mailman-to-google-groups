@@ -235,7 +235,7 @@ def main():
             if e.status_code == 409:  # entity already exists
                 logging.info(f"User {owner} already part of the group")
 
-    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     for nonmember in mmcfg["accept_these_nonmembers"]:
         if not re.match(email_regex, nonmember):
             logging.info(f"Ignoring invalid non-member email {nonmember}")
@@ -255,7 +255,7 @@ def main():
     logging.info("!!!  MAILING LIST SUBJECT PREFIX CANNOT BE SET PROGRAMMATICALLY  !!!")
     addr, domain = ggcfg["email"].split("@")
     logging.info(
-        f"Set 'Subject prefix' in https://groups.google.com/u/2/a/{domain}/g/{addr}/settings"
+        f"Set 'Subject prefix' to '{mmcfg['subject_prefix'].strip()}' in https://groups.google.com/u/2/a/{domain}/g/{addr}/settings"
     )
 
 
