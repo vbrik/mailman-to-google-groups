@@ -109,6 +109,13 @@ def main():
         help="mailman list configuration pickle created by pickle-mailman-list.py",
     )
     parser.add_argument(
+        "--ignore",
+        metavar="EMAIL",
+        default=[],
+        nargs='*',
+        help="don't add EMAIL to group members",
+    )
+    parser.add_argument(
         "--sa-creds",
         metavar="PATH",
         required=True,
@@ -193,6 +200,8 @@ def main():
     # https://stackoverflow.com/questions/66992809/google-admin-sdk-directory-api-members-get-returns-a-404-for-member-email-but
 
     for member in mmcfg["digest_members"]:
+        if member in args.ignore:
+            continue
         body = {"email": member, "delivery_settings": "DIGEST"}
         if member in mmcfg["owner"]:
             logging.info(f"Inserting digest member {member} (manager)")
@@ -208,6 +217,8 @@ def main():
                 raise
 
     for member in mmcfg["regular_members"]:
+        if member in args.ignore:
+            continue
         body = {"email": member, "delivery_settings": "ALL_MAIL"}
         if member in mmcfg["owner"]:
             logging.info(f"Inserting member {member} (manager)")
@@ -225,6 +236,8 @@ def main():
     for owner in set(mmcfg["owner"]) - set(
         mmcfg["digest_members"] + mmcfg["regular_members"]
     ):
+        if owner in args.ignore:
+            continue
         logging.info(f"Inserting non-member manager {owner}")
         try:
             members.insert(
@@ -237,6 +250,8 @@ def main():
 
     email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     for nonmember in mmcfg["accept_these_nonmembers"]:
+        if nonmember in args.ignore:
+            continue
         if not re.match(email_regex, nonmember):
             logging.info(f"Ignoring invalid non-member email {nonmember}")
             continue
