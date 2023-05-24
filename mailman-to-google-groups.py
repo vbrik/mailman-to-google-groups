@@ -133,6 +133,16 @@ def main():
         choices=("debug", "info", "warning", "error"),
         help="logging level (default: info)",
     )
+    parser.add_argument(
+        "--browser-google-account-index",
+        metavar="NUM",
+        type=int,
+        default=0,
+        help="index of the account in your browser's list of Google accounts that\n"
+        "has permission to edit setting of the group that will be created.\n"
+        "This is purely for convenience: group management URL will print out\n"
+        "like https://groups.google.com/u/NUM/... (default: 0)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -274,7 +284,7 @@ def main():
     logging.warning("!!!   SOME GOOGLE GROUP OPTIONS CANNOT BE SET PROGRAMMATICALLY")
     addr, domain = ggcfg["email"].split("@")
     logging.warning(
-        f"!!!   Configuration URL: https://groups.google.com/u/2/a/{domain}/g/{addr}/settings"
+        f"!!!   Configuration URL: https://groups.google.com/u/{args.browser_googleaccount-index}/a/{domain}/g/{addr}/settings"
     )
     logging.warning(f"!!!   Set 'Subject prefix' to '{mmcfg['subject_prefix'].strip()}'")
     logging.warning(f"!!!   Consider enabling 'Include the standard Groups footer'")
