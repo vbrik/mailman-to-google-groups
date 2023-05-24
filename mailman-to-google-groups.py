@@ -260,6 +260,7 @@ def main():
         except HttpError as e:
             if e.status_code == 409:  # entity already exists
                 logging.error(f"User {owner} already part of the group")
+                logging.warning(f"!!!  CONFIGURE AS MANAGER MANUALLY: {owner}")
 
     email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     for nonmember in mmcfg["accept_these_nonmembers"]:
@@ -284,10 +285,14 @@ def main():
     logging.warning("!!!   SOME GOOGLE GROUP OPTIONS CANNOT BE SET PROGRAMMATICALLY")
     addr, domain = ggcfg["email"].split("@")
     logging.warning(
-        f"!!!   Configuration URL: https://groups.google.com/u/{args.browser_googleaccount-index}/a/{domain}/g/{addr}/settings"
+        f"!!!   Set 'Subject prefix' to '{mmcfg['subject_prefix'].strip()}' in the 'Email options' section"
     )
-    logging.warning(f"!!!   Set 'Subject prefix' to '{mmcfg['subject_prefix'].strip()}'")
-    logging.warning(f"!!!   Consider enabling 'Include the standard Groups footer'")
+    logging.warning(
+        f"!!!   Consider enabling 'Include the standard Groups footer' in the 'Email options' section"
+    )
+    logging.warning(
+        f"!!!   https://groups.google.com/u/{args.browser_google_account_index}/a/{domain}/g/{addr}/settings#email"
+    )
 
 
 if __name__ == "__main__":
