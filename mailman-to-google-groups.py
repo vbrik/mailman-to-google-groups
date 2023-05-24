@@ -213,7 +213,7 @@ def main():
             members.insert(groupKey=ggcfg["email"], body=body).execute()
         except HttpError as e:
             if e.status_code == 409:  # entity already exists
-                logging.info(f"User {member} already part of the group")
+                logging.error(f"User {member} already part of the group")
             else:
                 raise
 
@@ -231,7 +231,7 @@ def main():
             members.insert(groupKey=ggcfg["email"], body=body).execute()
         except HttpError as e:
             if e.status_code == 409:  # entity already exists
-                logging.info(f"User {member} already part of the group")
+                logging.error(f"User {member} already part of the group")
             else:
                 raise
 
@@ -249,7 +249,7 @@ def main():
             ).execute()
         except HttpError as e:
             if e.status_code == 409:  # entity already exists
-                logging.info(f"User {owner} already part of the group")
+                logging.error(f"User {owner} already part of the group")
 
     email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     for nonmember in mmcfg["accept_these_nonmembers"]:
@@ -257,7 +257,7 @@ def main():
             logging.info(f"Skipping non-member {nonmember} (on the ignore list)")
             continue
         if not re.match(email_regex, nonmember):
-            logging.info(f"Ignoring invalid non-member email {nonmember}")
+            logging.warning(f"Ignoring invalid non-member email {nonmember}")
             continue
         logging.info(f"Inserting non-member {nonmember}")
         try:
@@ -267,17 +267,17 @@ def main():
             ).execute()
         except HttpError as e:
             if e.status_code == 409:  # entity already exists
-                logging.info(f"User {nonmember} already part of the group")
+                logging.error(f"User {nonmember} already part of the group")
 
     svc.close()
 
-    logging.info("!!!   SOME GOOGLE GROUP OPTIONS CANNOT BE SET PROGRAMMATICALLY")
+    logging.warning("!!!   SOME GOOGLE GROUP OPTIONS CANNOT BE SET PROGRAMMATICALLY")
     addr, domain = ggcfg["email"].split("@")
-    logging.info(
+    logging.warning(
         f"!!!   Configuration URL: https://groups.google.com/u/2/a/{domain}/g/{addr}/settings"
     )
-    logging.info(f"!!!   Set 'Subject prefix' to '{mmcfg['subject_prefix'].strip()}'")
-    logging.info(f"!!!   Consider enabling 'Include the standard Groups footer'")
+    logging.warning(f"!!!   Set 'Subject prefix' to '{mmcfg['subject_prefix'].strip()}'")
+    logging.warning(f"!!!   Consider enabling 'Include the standard Groups footer'")
 
 
 if __name__ == "__main__":
