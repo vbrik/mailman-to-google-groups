@@ -87,7 +87,7 @@ def get_google_group_config_from_mailman_config(mmcfg):
             if mmcfg["advertised"]
             else "ALL_MEMBERS_CAN_DISCOVER"
         ),
-        # "defaultSender": "DEFAULT_SELF",  # only matters if posting as group is enabled
+        "defaultSender": "DEFAULT_SELF",
     }
     return ggcfg
 
