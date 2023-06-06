@@ -279,6 +279,7 @@ def main():
         except HttpError as e:
             if e.status_code == 409:  # entity already exists
                 logging.error(f"User {nonmember} already part of the group")
+                logging.warning(f"!!!  RESOLVE CONFLICT MANUALLY FOR: {nonmember}")
 
     svc.close()
 
