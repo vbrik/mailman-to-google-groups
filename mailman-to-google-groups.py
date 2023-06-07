@@ -48,7 +48,7 @@ def get_google_group_config_from_mailman_config(mmcfg):
         "email": mmcfg["email"],
         "name": mmcfg["real_name"],
         "description": (
-            mmcfg["description"] + b"\n" + mmcfg["info"]
+            mmcfg["description"] + "\n" + mmcfg["info"]
             if mmcfg["info"]
             else mmcfg["description"]
         ),
