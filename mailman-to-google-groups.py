@@ -157,6 +157,17 @@ def main():
     logging.info("Converting mailman list settings to google group settings")
     ggcfg = get_google_group_config_from_mailman_config(mmcfg)
     logging.debug(pformat(ggcfg))
+    logging.info(f"whoCanViewMembership = {ggcfg['whoCanViewMembership']}")
+    logging.info(f"allowExternalMembers = {ggcfg['allowExternalMembers']}")
+    logging.info(f"whoCanPostMessage = {ggcfg['whoCanPostMessage']}")
+    logging.info(f"messageModerationLevel = {ggcfg['messageModerationLevel']}")
+    logging.info(f"whoCanDiscoverGroup = {ggcfg['whoCanDiscoverGroup']}")
+    if (
+        ggcfg["whoCanPostMessage"] == "ANYONE_CAN_POST"
+        and ggcfg["messageModerationLevel"] == "MODERATE_NONE"
+        and ggcfg["allowExternalMembers"] == "true"
+    ):
+        logging.warning(f"!!!  LIST ACCEPTS MESSAGES FROM ANYBODY WITHOUT MODERATION")
 
     SCOPES = [
         "https://www.googleapis.com/auth/admin.directory.group",
